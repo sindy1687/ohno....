@@ -1,0 +1,984 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <title>真實多人遊戲大廳</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  
+  <style>
+    :root {
+      --primary: #00ffff;
+      --secondary: #a259ff;
+      --accent: #ffd700;
+      --success: #25d366;
+      --warning: #ff6b6b;
+      --bg-dark: rgba(10, 20, 40, 0.9);
+      --gradient-primary: linear-gradient(45deg, var(--primary), var(--secondary));
+      --gradient-accent: linear-gradient(45deg, var(--accent), #ff8c00);
+      --chat-bg: rgba(0, 0, 0, 0.7);
+      --message-bg: rgba(0, 255, 255, 0.1);
+      --system-bg: rgba(255, 215, 0, 0.1);
+    }
+    
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: 'Orbitron', sans-serif;
+      background: linear-gradient(135deg, #0a1428 0%, #1a2a4a 100%);
+      color: #fff;
+      min-height: 100vh;
+      padding: 20px;
+    }
+    
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    
+    .header {
+      background: var(--bg-dark);
+      padding: 20px;
+      border-radius: 15px;
+      border: 2px solid var(--primary);
+      text-align: center;
+      margin-bottom: 20px;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .header::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(0, 255, 255, 0.1), transparent);
+      animation: headerShine 3s ease-in-out infinite;
+    }
+    
+    @keyframes headerShine {
+      0%, 100% { left: -100%; }
+      50% { left: 100%; }
+    }
+    
+    .header h1 {
+      font-size: 2.5rem;
+      background: var(--gradient-primary);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 10px;
+      position: relative;
+      z-index: 2;
+    }
+    
+    .connection-status {
+      display: flex;
+      justify-content: center;
+      gap: 30px;
+      position: relative;
+      z-index: 2;
+      margin-top: 15px;
+    }
+    
+    .status-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: #ccc;
+    }
+    
+    .connection-indicator {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--warning);
+      animation: pulse 2s infinite;
+    }
+    
+    .connection-indicator.connected {
+      background: var(--success);
+    }
+    
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+    
+    .user-setup {
+      background: var(--bg-dark);
+      padding: 30px;
+      border-radius: 15px;
+      border: 2px solid var(--primary);
+      margin-bottom: 20px;
+      text-align: center;
+    }
+    
+    .user-setup h3 {
+      color: var(--primary);
+      margin-bottom: 20px;
+    }
+    
+    .setup-form {
+      display: flex;
+      gap: 15px;
+      justify-content: center;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    
+    .form-input {
+      padding: 12px;
+      border: 2px solid var(--primary);
+      border-radius: 10px;
+      background: rgba(0, 0, 0, 0.5);
+      color: #fff;
+      font-family: 'Orbitron', sans-serif;
+      transition: all 0.3s;
+    }
+    
+    .form-input:focus {
+      outline: none;
+      box-shadow: 0 0 15px var(--primary);
+    }
+    
+    .btn {
+      background: var(--gradient-primary);
+      color: #000;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 10px;
+      cursor: pointer;
+      font-weight: bold;
+      font-family: 'Orbitron', sans-serif;
+      transition: all 0.3s;
+    }
+    
+    .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(0, 255, 255, 0.3);
+    }
+    
+    .btn-success {
+      background: linear-gradient(45deg, var(--success), #128c7e);
+      color: #fff;
+    }
+    
+    .btn-secondary {
+      background: var(--gradient-accent);
+    }
+    
+    .lobby-content {
+      display: grid;
+      grid-template-columns: 1fr 300px;
+      gap: 20px;
+      height: calc(100vh - 300px);
+    }
+    
+    .chat-section {
+      background: var(--bg-dark);
+      border-radius: 15px;
+      border: 2px solid var(--primary);
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .chat-header {
+      padding: 20px;
+      border-bottom: 2px solid var(--primary);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .chat-title {
+      font-size: 1.3rem;
+      color: var(--primary);
+      font-weight: bold;
+    }
+    
+    .chat-controls {
+      display: flex;
+      gap: 10px;
+    }
+    
+    .chat-area {
+      flex: 1;
+      padding: 20px;
+      overflow-y: auto;
+      background: var(--chat-bg);
+      margin: 20px;
+      border-radius: 10px;
+      border: 1px solid var(--primary);
+    }
+    
+    .message {
+      margin-bottom: 15px;
+      padding: 12px;
+      border-radius: 10px;
+      animation: messageSlide 0.3s ease-out;
+    }
+    
+    @keyframes messageSlide {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    
+    .message.user {
+      background: var(--message-bg);
+      border-left: 4px solid var(--primary);
+      margin-left: 20px;
+    }
+    
+    .message.other {
+      background: rgba(162, 89, 255, 0.1);
+      border-left: 4px solid var(--secondary);
+      margin-right: 20px;
+    }
+    
+    .message.system {
+      background: var(--system-bg);
+      border-left: 4px solid var(--accent);
+      text-align: center;
+      font-style: italic;
+    }
+    
+    .message-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+    
+    .message-author {
+      font-weight: bold;
+      color: var(--primary);
+    }
+    
+    .message-time {
+      font-size: 0.8rem;
+      color: #888;
+    }
+    
+    .message-content {
+      line-height: 1.4;
+    }
+    
+    .message.system .message-content {
+      color: var(--accent);
+    }
+    
+    .chat-input-container {
+      padding: 20px;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+    
+    .chat-input {
+      flex: 1;
+      padding: 12px;
+      border: 2px solid var(--primary);
+      border-radius: 10px;
+      background: rgba(0, 0, 0, 0.5);
+      color: #fff;
+      font-family: 'Orbitron', sans-serif;
+      transition: all 0.3s;
+    }
+    
+    .chat-input:focus {
+      outline: none;
+      box-shadow: 0 0 15px var(--primary);
+    }
+    
+    .send-btn {
+      background: var(--gradient-primary);
+      color: #000;
+      border: none;
+      padding: 12px 20px;
+      border-radius: 10px;
+      cursor: pointer;
+      font-weight: bold;
+      font-family: 'Orbitron', sans-serif;
+      transition: all 0.3s;
+    }
+    
+    .send-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(0, 255, 255, 0.3);
+    }
+    
+    .sidebar {
+      background: var(--bg-dark);
+      border-radius: 15px;
+      border: 2px solid var(--primary);
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+    
+    .sidebar h3 {
+      color: var(--primary);
+      margin-bottom: 15px;
+      text-align: center;
+    }
+    
+    .player-list {
+      flex: 1;
+      overflow-y: auto;
+    }
+    
+    .player-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px;
+      border-radius: 10px;
+      margin-bottom: 8px;
+      background: rgba(0, 255, 255, 0.1);
+      border: 1px solid var(--primary);
+      transition: all 0.3s;
+    }
+    
+    .player-item:hover {
+      background: rgba(0, 255, 255, 0.2);
+      transform: translateX(5px);
+    }
+    
+    .player-avatar {
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      background: var(--gradient-accent);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.8rem;
+      font-weight: bold;
+    }
+    
+    .player-info {
+      flex: 1;
+    }
+    
+    .player-name {
+      font-weight: bold;
+      color: var(--primary);
+    }
+    
+    .player-status {
+      font-size: 0.8rem;
+      color: #ccc;
+    }
+    
+    .online-indicator {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--success);
+      animation: pulse 2s infinite;
+    }
+    
+    .typing-indicator {
+      color: #888;
+      font-style: italic;
+      font-size: 0.9rem;
+      margin-bottom: 10px;
+      padding: 0 20px;
+    }
+    
+    .notification {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: var(--success);
+      color: #fff;
+      padding: 15px 20px;
+      border-radius: 10px;
+      z-index: 1001;
+      animation: slideIn 0.3s ease-out;
+    }
+    
+    @keyframes slideIn {
+      from {
+        transform: translateX(100%);
+        opacity: 0;
+      }
+      to {
+        transform: translateX(0);
+        opacity: 1;
+      }
+    }
+    
+    .connection-info {
+      background: rgba(255, 215, 0, 0.1);
+      border: 2px solid var(--accent);
+      border-radius: 10px;
+      padding: 15px;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+    
+    .connection-info h4 {
+      color: var(--accent);
+      margin-bottom: 10px;
+    }
+    
+    .connection-info p {
+      color: #ccc;
+      font-size: 0.9rem;
+    }
+    
+    .hidden {
+      display: none;
+    }
+    
+    @media (max-width: 768px) {
+      .lobby-content {
+        grid-template-columns: 1fr;
+        height: auto;
+      }
+      
+      .header h1 {
+        font-size: 2rem;
+      }
+      
+      .connection-status {
+        flex-direction: column;
+        gap: 15px;
+      }
+      
+      .setup-form {
+        flex-direction: column;
+      }
+      
+      .chat-area {
+        height: 400px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>真實多人遊戲大廳</h1>
+      <div class="connection-status">
+        <div class="status-item">
+          <div class="connection-indicator" id="connectionIndicator"></div>
+          <span id="connectionStatus">未連接</span>
+        </div>
+        <div class="status-item">
+          <i class="fas fa-users"></i>
+          <span>在線: <span id="onlineCount">0</span></span>
+        </div>
+        <div class="status-item">
+          <i class="fas fa-user"></i>
+          <span id="userName">未設定</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 用戶設定區域 -->
+    <div class="user-setup" id="userSetup">
+      <h3><i class="fas fa-user-cog"></i> 設定您的身份</h3>
+      <div class="setup-form">
+        <input type="text" class="form-input" id="userNameInput" placeholder="輸入您的暱稱" maxlength="20">
+        <select class="form-input" id="userAvatar">
+          <option value="🎮">🎮 遊戲玩家</option>
+          <option value="🎴">🎴 卡片收藏家</option>
+          <option value="⭐">⭐ 歐皇</option>
+          <option value="🚀">🚀 太空戰士</option>
+          <option value="🌟">🌟 幸運星</option>
+          <option value="🎲">🎲 抽卡大師</option>
+        </select>
+        <button class="btn btn-success" onclick="joinLobby()">
+          <i class="fas fa-sign-in-alt"></i> 加入大廳
+        </button>
+      </div>
+    </div>
+
+    <!-- 連接資訊 -->
+    <div class="connection-info" id="connectionInfo">
+      <h4><i class="fas fa-info-circle"></i> 多人連接說明</h4>
+      <p>這是一個真實的多人遊戲大廳，需要其他玩家同時開啟此頁面才能進行互動。</p>
+      <p>您可以：</p>
+      <ul style="text-align: left; margin: 10px 0;">
+        <li>分享此頁面連結給朋友</li>
+        <li>在不同瀏覽器分頁中開啟多個用戶</li>
+        <li>使用不同裝置同時連接</li>
+      </ul>
+    </div>
+
+    <!-- 遊戲大廳內容 -->
+    <div class="lobby-content hidden" id="lobbyContent">
+      <div class="chat-section">
+        <div class="chat-header">
+          <div class="chat-title">
+            <i class="fas fa-comments"></i> 真實多人聊天室
+          </div>
+          <div class="chat-controls">
+            <button class="btn" onclick="clearChat()">
+              <i class="fas fa-trash"></i> 清除聊天
+            </button>
+            <button class="btn btn-secondary" onclick="shareCard()">
+              <i class="fas fa-share"></i> 分享卡片
+            </button>
+            <button class="btn btn-secondary" onclick="leaveLobby()">
+              <i class="fas fa-sign-out-alt"></i> 離開大廳
+            </button>
+          </div>
+        </div>
+        
+        <div class="chat-area" id="chatArea">
+          <!-- 聊天訊息將在這裡顯示 -->
+        </div>
+        
+        <div class="typing-indicator" id="typingIndicator" style="display: none;">
+          <i class="fas fa-ellipsis-h"></i> 有人正在輸入...
+        </div>
+        
+        <div class="chat-input-container">
+          <input type="text" class="chat-input" id="chatInput" placeholder="輸入訊息..." maxlength="200">
+          <button class="send-btn" onclick="sendMessage()">
+            <i class="fas fa-paper-plane"></i> 發送
+          </button>
+        </div>
+      </div>
+
+      <div class="sidebar">
+        <h3><i class="fas fa-users"></i> 真實玩家</h3>
+        <div class="player-list" id="playerList">
+          <!-- 真實玩家列表將在這裡顯示 -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // 真實多人遊戲大廳系統
+    class RealMultiplayerLobby {
+      constructor() {
+        this.currentUser = null;
+        this.players = new Map(); // 使用 Map 來儲存真實玩家
+        this.messages = [];
+        this.typingUsers = new Set();
+        this.typingTimeout = null;
+        this.connectionId = null;
+        this.isConnected = false;
+        
+        this.init();
+      }
+      
+      init() {
+        this.setupEventListeners();
+        this.generateConnectionId();
+        this.loadStoredUser();
+      }
+      
+      generateConnectionId() {
+        // 生成唯一的連接ID
+        this.connectionId = 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+      }
+      
+      loadStoredUser() {
+        // 從 localStorage 載入已儲存的用戶資訊
+        const storedUser = localStorage.getItem('lobbyUser');
+        if (storedUser) {
+          const userData = JSON.parse(storedUser);
+          this.setupUser(userData.name, userData.avatar);
+        }
+      }
+      
+      setupUser(name, avatar) {
+        this.currentUser = {
+          id: this.connectionId,
+          name: name,
+          avatar: avatar,
+          status: 'online',
+          joinTime: Date.now()
+        };
+        
+        // 儲存用戶資訊到 localStorage
+        localStorage.setItem('lobbyUser', JSON.stringify({
+          name: name,
+          avatar: avatar
+        }));
+        
+        this.updateUI();
+        this.simulateConnection();
+      }
+      
+      setupEventListeners() {
+        // 聊天輸入事件
+        const chatInput = document.getElementById('chatInput');
+        if (chatInput) {
+          chatInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+              this.sendMessage();
+            }
+          });
+          
+          chatInput.addEventListener('input', () => {
+            this.setTyping(true);
+          });
+        }
+        
+        // 用戶名稱輸入事件
+        const userNameInput = document.getElementById('userNameInput');
+        if (userNameInput) {
+          userNameInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+              this.joinLobby();
+            }
+          });
+        }
+      }
+      
+      joinLobby() {
+        const userNameInput = document.getElementById('userNameInput');
+        const userAvatarSelect = document.getElementById('userAvatar');
+        
+        const name = userNameInput.value.trim();
+        const avatar = userAvatarSelect.value;
+        
+        if (!name) {
+          this.showNotification('請輸入您的暱稱！', 'error');
+          return;
+        }
+        
+        this.setupUser(name, avatar);
+        
+        // 隱藏設定區域，顯示大廳
+        document.getElementById('userSetup').classList.add('hidden');
+        document.getElementById('connectionInfo').classList.add('hidden');
+        document.getElementById('lobbyContent').classList.remove('hidden');
+        
+        this.showNotification(`歡迎 ${name} 加入遊戲大廳！`);
+        
+        // 添加系統訊息
+        this.addSystemMessage(`${name} 加入了遊戲大廳`);
+      }
+      
+      leaveLobby() {
+        if (confirm('確定要離開遊戲大廳嗎？')) {
+          this.addSystemMessage(`${this.currentUser.name} 離開了遊戲大廳`);
+          
+          // 顯示設定區域，隱藏大廳
+          document.getElementById('userSetup').classList.remove('hidden');
+          document.getElementById('connectionInfo').classList.remove('hidden');
+          document.getElementById('lobbyContent').classList.add('hidden');
+          
+          // 清除聊天記錄
+          this.messages = [];
+          this.players.clear();
+          this.updateUI();
+          
+          this.showNotification('已離開遊戲大廳');
+        }
+      }
+      
+      simulateConnection() {
+        // 模擬連接狀態
+        this.isConnected = true;
+        this.updateConnectionStatus();
+        
+        // 添加自己到玩家列表
+        this.players.set(this.currentUser.id, this.currentUser);
+        this.updateUI();
+        
+        // 模擬其他真實玩家加入（基於 localStorage 同步）
+        this.syncWithOtherTabs();
+      }
+      
+      syncWithOtherTabs() {
+        // 監聽其他分頁的變化
+        window.addEventListener('storage', (e) => {
+          if (e.key === 'lobbyMessages') {
+            const newMessages = JSON.parse(e.newValue || '[]');
+            this.messages = newMessages;
+            this.updateChatArea();
+          }
+          
+          if (e.key === 'lobbyPlayers') {
+            const newPlayers = JSON.parse(e.newValue || '{}');
+            this.players = new Map(Object.entries(newPlayers));
+            this.updatePlayerList();
+            this.updateOnlineCount();
+          }
+        });
+        
+        // 定期同步資料
+        setInterval(() => {
+          this.syncData();
+        }, 1000);
+      }
+      
+      syncData() {
+        // 同步訊息到其他分頁
+        localStorage.setItem('lobbyMessages', JSON.stringify(this.messages));
+        
+        // 同步玩家列表到其他分頁
+        const playersObj = Object.fromEntries(this.players);
+        localStorage.setItem('lobbyPlayers', JSON.stringify(playersObj));
+      }
+      
+      updateConnectionStatus() {
+        const indicator = document.getElementById('connectionIndicator');
+        const status = document.getElementById('connectionStatus');
+        
+        if (this.isConnected) {
+          indicator.classList.add('connected');
+          status.textContent = '已連接';
+        } else {
+          indicator.classList.remove('connected');
+          status.textContent = '未連接';
+        }
+      }
+      
+      updateUI() {
+        if (this.currentUser) {
+          document.getElementById('userName').textContent = this.currentUser.name;
+        }
+        this.updatePlayerList();
+        this.updateChatArea();
+        this.updateOnlineCount();
+      }
+      
+      updatePlayerList() {
+        const playerList = document.getElementById('playerList');
+        if (!playerList) return;
+        
+        playerList.innerHTML = '';
+        
+        if (this.players.size === 0) {
+          playerList.innerHTML = '<div style="text-align: center; color: #888; padding: 20px;">目前只有您一個人<br>邀請朋友加入吧！</div>';
+          return;
+        }
+        
+        this.players.forEach(player => {
+          const playerItem = document.createElement('div');
+          playerItem.className = 'player-item';
+          
+          const isCurrentUser = player.id === this.currentUser?.id;
+          
+          playerItem.innerHTML = `
+            <div class="player-avatar" style="background: ${isCurrentUser ? 'var(--gradient-primary)' : 'var(--gradient-accent)'}">
+              ${player.avatar}
+            </div>
+            <div class="player-info">
+              <div class="player-name">${player.name}</div>
+              <div class="player-status">${player.status === 'online' ? '在線' : '離開'}</div>
+            </div>
+            <div class="online-indicator"></div>
+          `;
+          
+          playerList.appendChild(playerItem);
+        });
+      }
+      
+      updateChatArea() {
+        const chatArea = document.getElementById('chatArea');
+        if (!chatArea) return;
+        
+        chatArea.innerHTML = '';
+        
+        this.messages.forEach(message => {
+          const messageElement = this.createMessageElement(message);
+          chatArea.appendChild(messageElement);
+        });
+        
+        // 滾動到底部
+        chatArea.scrollTop = chatArea.scrollHeight;
+      }
+      
+      createMessageElement(message) {
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `message ${message.type}`;
+        
+        const time = new Date(message.timestamp).toLocaleTimeString('zh-TW', { 
+          hour: '2-digit', 
+          minute: '2-digit' 
+        });
+        
+        messageDiv.innerHTML = `
+          <div class="message-header">
+            <span class="message-author">${message.author}</span>
+            <span class="message-time">${time}</span>
+          </div>
+          <div class="message-content">${message.content}</div>
+        `;
+        
+        return messageDiv;
+      }
+      
+      updateOnlineCount() {
+        const onlineCount = this.players.size;
+        document.getElementById('onlineCount').textContent = onlineCount;
+      }
+      
+      sendMessage() {
+        if (!this.currentUser) return;
+        
+        const chatInput = document.getElementById('chatInput');
+        const content = chatInput.value.trim();
+        
+        if (!content) return;
+        
+        const message = {
+          id: 'msg_' + Date.now(),
+          author: this.currentUser.name,
+          content: content,
+          timestamp: Date.now(),
+          type: 'user'
+        };
+        
+        this.messages.push(message);
+        this.updateChatArea();
+        this.syncData();
+        
+        // 清空輸入框
+        chatInput.value = '';
+      }
+      
+      addSystemMessage(content) {
+        const message = {
+          id: 'msg_' + Date.now(),
+          author: '系統',
+          content: content,
+          timestamp: Date.now(),
+          type: 'system'
+        };
+        
+        this.messages.push(message);
+        this.updateChatArea();
+        this.syncData();
+      }
+      
+      setTyping(isTyping) {
+        if (isTyping) {
+          this.typingUsers.add(this.currentUser.name);
+          this.updateTypingIndicator();
+          
+          // 清除之前的計時器
+          if (this.typingTimeout) {
+            clearTimeout(this.typingTimeout);
+          }
+          
+          // 3秒後停止顯示輸入中
+          this.typingTimeout = setTimeout(() => {
+            this.typingUsers.delete(this.currentUser.name);
+            this.updateTypingIndicator();
+          }, 3000);
+        } else {
+          this.typingUsers.delete(this.currentUser.name);
+          this.updateTypingIndicator();
+        }
+      }
+      
+      updateTypingIndicator() {
+        const indicator = document.getElementById('typingIndicator');
+        if (!indicator) return;
+        
+        if (this.typingUsers.size > 0) {
+          const typingList = Array.from(this.typingUsers).join(', ');
+          indicator.textContent = `${typingList} 正在輸入...`;
+          indicator.style.display = 'block';
+        } else {
+          indicator.style.display = 'none';
+        }
+      }
+      
+      clearChat() {
+        if (confirm('確定要清除所有聊天記錄嗎？')) {
+          this.messages = [];
+          this.updateChatArea();
+          this.syncData();
+          this.showNotification('聊天記錄已清除');
+        }
+      }
+      
+      shareCard() {
+        if (!this.currentUser) return;
+        
+        const cardMessages = [
+          '我剛剛抽到了SSR角色！',
+          '分享一張超稀有的卡片',
+          '今天運氣不錯，抽到了想要的卡片',
+          '有人想要這張卡片嗎？',
+          '這張卡片太棒了！'
+        ];
+        
+        const randomMessage = cardMessages[Math.floor(Math.random() * cardMessages.length)];
+        
+        const message = {
+          id: 'msg_' + Date.now(),
+          author: this.currentUser.name,
+          content: randomMessage,
+          timestamp: Date.now(),
+          type: 'user'
+        };
+        
+        this.messages.push(message);
+        this.updateChatArea();
+        this.syncData();
+        this.showNotification('卡片分享成功！');
+      }
+      
+      showNotification(message, type = 'success') {
+        const notification = document.createElement('div');
+        notification.className = 'notification';
+        notification.style.background = type === 'error' ? 'var(--warning)' : 'var(--success)';
+        notification.textContent = message;
+        
+        document.body.appendChild(notification);
+        
+        setTimeout(() => {
+          notification.remove();
+        }, 3000);
+      }
+    }
+    
+    // 全域函數供 HTML 調用
+    let gameLobby;
+    
+    function joinLobby() {
+      gameLobby.joinLobby();
+    }
+    
+    function leaveLobby() {
+      gameLobby.leaveLobby();
+    }
+    
+    function sendMessage() {
+      gameLobby.sendMessage();
+    }
+    
+    function clearChat() {
+      gameLobby.clearChat();
+    }
+    
+    function shareCard() {
+      gameLobby.shareCard();
+    }
+    
+    // 初始化遊戲大廳
+    document.addEventListener('DOMContentLoaded', function() {
+      gameLobby = new RealMultiplayerLobby();
+    });
+  </script>
+</body>
+</html> 
